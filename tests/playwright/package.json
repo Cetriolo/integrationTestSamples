@@ -1,0 +1,15 @@
+{
+  "name": "playwright-api-tests",
+  "version": "1.0.0",
+  "description": "Playwright API tests for Go application",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

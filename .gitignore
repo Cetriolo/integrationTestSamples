@@ -1,0 +1,63 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+go-api-test
+app
+main
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.out
+coverage.html
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test reports and artifacts
+reports/
+test-results/
+playwright-report/
+*.log
+
+# Playwright
+tests/playwright/node_modules/
+tests/playwright/playwright-report/
+tests/playwright/test-results/
+tests/playwright/.playwright/
+tests/playwright/package-lock.json
+
+# Docker
+*.pid
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Newman
+newman/
+.postman/
+
+# k6
+k6-output/
+
+# Temporary files
+tmp/
+temp/

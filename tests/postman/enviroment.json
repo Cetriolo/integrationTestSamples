@@ -1,0 +1,55 @@
+{
+  "id": "test-environment",
+  "name": "Test Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "testUserName",
+      "value": "Newman Test User",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testUserEmail",
+      "value": "newman@example.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testProductName",
+      "value": "Test Product",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testProductPrice",
+      "value": "99.99",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "maxResponseTime",
+      "value": "500",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

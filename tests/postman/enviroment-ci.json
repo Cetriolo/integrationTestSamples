@@ -1,0 +1,55 @@
+{
+  "id": "ci-environment",
+  "name": "CI Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://api:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "any",
+      "enabled": true
+    },
+    {
+      "key": "testUserName",
+      "value": "CI Test User",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testUserEmail",
+      "value": "ci-test@example.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testProductName",
+      "value": "CI Test Product",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testProductPrice",
+      "value": "149.99",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "maxResponseTime",
+      "value": "1000",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

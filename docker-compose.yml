@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=development
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - app-network
+
+  # Newman for Postman tests
+  newman:
+    image: postman/newman:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./tests/postman:/etc/newman
+      - ./reports:/reports
+    command: >
+      run /etc/newman/collection.json
+      --environment /etc/newman/environment.json
+      --reporters cli,htmlextra
+      --reporter-htmlextra-export /reports/newman-report.html
+    networks:
+      - app-network
+
+  # k6 for load testing
+  k6:
+    image: grafana/k6:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./tests/k6:/scripts
+      - ./reports:/reports
+    environment:
+      - API_URL=http://api:8080
+    command: run --vus 10 --duration 30s /scripts/load-test.js
+    networks:
+      - app-network
+
+  # Hurl for declarative tests
+  hurl:
+    image: orangeopensource/hurl:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./tests/hurl:/tests
+      - ./reports:/reports
+    working_dir: /tests
+    command: >
+      --test
+      --variable base_url=http://api:8080
+      --report-html /reports/hurl
+      *.hurl
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  reports:

@@ -1,0 +1,79 @@
+name: Go Direct Smoke Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  smoke-tests:
+    name: Go Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build application
+        run: go build -v -o app .
+
+      - name: Start application
+        run: |
+          ./app &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+          
+          # Wait for app to be ready
+          echo "Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Application is ready!"
+              break
+            fi
+            echo "Attempt $i: Application not ready yet..."
+            sleep 2
+          done
+
+      - name: Run smoke tests
+        env:
+          API_URL: http://localhost:8080
+        run: |
+          go test -v -run TestHealth ./...
+          go test -v -run TestGetUsers ./...
+          go test -v -run TestGetProducts ./...
+          go test -v -run TestResponseTime ./...
+
+      - name: Run full test suite
+        env:
+          API_URL: http://localhost:8080
+        run: go test -v -cover ./...
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ ! -z "$APP_PID" ]; then
+            kill $APP_PID || true
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-test-results
+          path: |
+            coverage.out
+            test-results.json

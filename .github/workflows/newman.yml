@@ -1,0 +1,101 @@
+name: Newman API Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  newman-tests:
+    name: Postman/Newman Tests
+    runs-on: ubuntu-latest
+
+    services:
+      api:
+        image: ghcr.io/${{ github.repository }}:latest
+        ports:
+          - 8080:8080
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Newman
+        run: |
+          npm install -g newman
+          npm install -g newman-reporter-htmlextra
+
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+              echo "API is ready!"
+              break
+            fi
+            echo "Attempt $i: Waiting..."
+            sleep 2
+          done
+
+      - name: Run Newman tests
+        run: |
+          newman run tests/postman/collection.json \
+            --environment tests/postman/environment.json \
+            --reporters cli,htmlextra,json \
+            --reporter-htmlextra-export reports/newman-report.html \
+            --reporter-json-export reports/newman-report.json \
+            --bail \
+            --color on
+
+      - name: Upload Newman reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-reports
+          path: reports/
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('reports/newman-report.json', 'utf8'));
+            
+            const summary = `
+            ### 📊 Newman Test Results
+            
+            - **Total Tests:** ${report.run.stats.tests.total}
+            - **Passed:** ✅ ${report.run.stats.tests.total - report.run.stats.tests.failed}
+            - **Failed:** ❌ ${report.run.stats.tests.failed}
+            - **Duration:** ${report.run.timings.completed - report.run.timings.started}ms
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      - name: Fail if tests failed
+        run: |
+          if [ -f reports/newman-report.json ]; then
+            FAILURES=$(jq '.run.stats.tests.failed' reports/newman-report.json)
+            if [ "$FAILURES" -gt 0 ]; then
+              echo "❌ $FAILURES test(s) failed"
+              exit 1
+            fi
+          fi

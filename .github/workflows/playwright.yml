@@ -1,0 +1,116 @@
+name: Playwright API Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  playwright-tests:
+    name: Playwright E2E & API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      api:
+        image: ghcr.io/${{ github.repository }}:latest
+        ports:
+          - 8080:8080
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tests/api.spec.js/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tests/api.spec.js
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: tests/api.spec.js
+        run: npx api.spec.js install --with-deps chromium
+
+      - name: Wait for API
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+              echo "API is ready!"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run Playwright tests
+        working-directory: tests/api.spec.js
+        env:
+          API_URL: http://localhost:8080
+        run: npx api.spec.js test --reporter=html,json,line
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api.spec.js-report
+          path: tests/api.spec.js/api.spec.js-report/
+          retention-days: 30
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api.spec.js-results
+          path: tests/api.spec.js/test-results/
+
+      - name: Comment PR with test summary
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const results = JSON.parse(fs.readFileSync('tests/playwright/test-results.json', 'utf8'));
+            
+              const summary = `
+              ### 🎭 Playwright Test Results
+            
+              - **Total Tests:** ${results.suites.reduce((acc, s) => acc + s.specs.length, 0)}
+              - **Passed:** ✅ ${results.suites.reduce((acc, s) => acc + s.specs.filter(spec => spec.ok).length, 0)}
+              - **Failed:** ❌ ${results.suites.reduce((acc, s) => acc + s.specs.filter(spec => !spec.ok).length, 0)}
+              - **Duration:** ${results.duration}ms
+            
+              [View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              `;
+            
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            } catch (error) {
+              console.log('Could not parse test results:', error);
+            }
+
+      - name: Check test results
+        if: always()
+        run: |
+          if [ -f tests/playwright/test-results.json ]; then
+            FAILURES=$(jq '[.suites[].specs[] | select(.ok == false)] | length' tests/playwright/test-results.json)
+            if [ "$FAILURES" -gt 0 ]; then
+              echo "❌ $FAILURES test(s) failed"
+              exit 1
+            fi
+          fi

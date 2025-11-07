@@ -1,0 +1,149 @@
+name: Hurl Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  hurl-tests:
+    name: Hurl Declarative API Tests
+    runs-on: ubuntu-latest
+
+    services:
+      api:
+        image: ghcr.io/${{ github.repository }}:latest
+        ports:
+          - 8080:8080
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Hurl
+        run: |
+          VERSION=4.3.0
+          curl -LO https://github.com/Orange-OpenSource/hurl/releases/download/$VERSION/hurl_${VERSION}_amd64.deb
+          sudo dpkg -i hurl_${VERSION}_amd64.deb
+
+      - name: Wait for API
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+              echo "API is ready!"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run Hurl tests
+        run: |
+          hurl --test \
+            --variable base_url=http://localhost:8080 \
+            --report-html reports/hurl \
+            --report-junit reports/hurl/junit.xml \
+            --json reports/hurl/results.json \
+            --color \
+            tests/hurl/*.hurl
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "### 🔥 Hurl Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f reports/hurl/results.json ]; then
+            cat reports/hurl/results.json | jq -r '
+              def format_duration: . / 1000000 | tostring + "ms";
+          
+              "**Total Tests:** \(.results | length)",
+              "**Passed:** ✅ \(.results | map(select(.success == true)) | length)",
+              "**Failed:** ❌ \(.results | map(select(.success == false)) | length)",
+              "**Duration:** \(.duration | format_duration)",
+              "",
+              "#### Failed Tests",
+              (.results | map(select(.success == false)) | 
+                if length > 0 then
+                  map("- ❌ \(.filename)") | join("\n")
+                else
+                  "_No failures_ ✨"
+                end
+              )
+            ' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Hurl reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test.hurl-reports
+          path: reports/api-test.hurl/
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: reports/api-test.hurl/junit.xml
+          check_name: Hurl Test Results
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            if (!fs.existsSync('reports/hurl/results.json')) {
+              console.log('No results file found');
+              return;
+            }
+            
+            const results = JSON.parse(fs.readFileSync('reports/hurl/results.json', 'utf8'));
+            
+            const passed = results.results.filter(r => r.success).length;
+            const failed = results.results.filter(r => !r.success).length;
+            const total = results.results.length;
+            
+            let failureDetails = '';
+            if (failed > 0) {
+              failureDetails = '\n\n#### Failed Tests:\n' + 
+                results.results
+                  .filter(r => !r.success)
+                  .map(r => `- ❌ ${r.filename}`)
+                  .join('\n');
+            }
+            
+            const summary = `
+            ### 🔥 Hurl Test Results
+            
+            - **Total:** ${total}
+            - **Passed:** ✅ ${passed}
+            - **Failed:** ❌ ${failed}
+            - **Success Rate:** ${((passed/total)*100).toFixed(1)}%
+            ${failureDetails}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      - name: Fail if tests failed
+        if: always()
+        run: |
+          if [ -f reports/hurl/results.json ]; then
+            FAILURES=$(jq '[.results[] | select(.success == false)] | length' reports/hurl/results.json)
+            if [ "$FAILURES" -gt 0 ]; then
+              echo "❌ $FAILURES test(s) failed"
+              exit 1
+            fi
+          fi

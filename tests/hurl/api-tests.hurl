@@ -125,7 +125,7 @@ GET {{base_url}}/api/slow
 HTTP 200
 [Asserts]
 jsonpath "$.message" contains "slow"
-duration > 3000
+duration >= 3000
 duration < 5000
 
 # Invalid Request Tests

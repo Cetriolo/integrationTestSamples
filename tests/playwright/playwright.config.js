@@ -1,5 +1,5 @@
 // tests/api.spec.js/api.spec.js.config.js
-import { defineConfig } from '@api.spec.js/test';
+const { defineConfig } = require('@playwright/test');
 
 export default defineConfig({
   testDir: './tests',

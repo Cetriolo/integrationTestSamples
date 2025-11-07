@@ -10,6 +10,14 @@
     "codegen": "playwright codegen"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0"
-  }
+    "@playwright/test": "^1.56.1"
+  },
+  "main": "playwright.config.js",
+  "directories": {
+    "test": "tests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }

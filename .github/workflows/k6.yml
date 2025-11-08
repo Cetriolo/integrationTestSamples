@@ -19,6 +19,9 @@ on:
 
 jobs:
   k6-smoke-test:
+
+
+
     name: load-test.js Smoke Test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.inputs.test_type == 'smoke'
@@ -35,6 +38,28 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Wait for API
+        run: |
+          echo "Waiting for API to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+              echo "API is ready!"
+              sleep 5  # Give it extra time to stabilize
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "API failed to become ready"
+              exit 1
+            fi
+            echo "Attempt $i/30: API not ready yet, waiting..."
+            sleep 2
+          done
+
+      - name: Verify API is responding
+        run: |
+          curl -v http://localhost:8080/health
+          curl -v http://localhost:8080/api/users
+
       - name: Checkout code
         uses: actions/checkout@v4
 

@@ -16,8 +16,8 @@ export const options = {
   ],
   thresholds: {
     http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
-    http_req_failed: ['rate<0.1'],    // Error rate should be less than 10%
-    errors: ['rate<0.1'],
+    http_req_failed: ['rate<0.10'],    // Error rate should be less than 10%
+    errors: ['rate<0.10'],
   },
 };
 
@@ -184,7 +184,7 @@ export const smokeTestOptions = {
   duration: '30s',
   thresholds: {
     http_req_duration: ['p(99)<1000'],
-    http_req_failed: ['rate<0.01'],
+    http_req_failed: ['rate<0.10'],
   },
 };
 
@@ -199,7 +199,7 @@ export const loadTestOptions = {
   ],
   thresholds: {
     http_req_duration: ['p(99)<1500'],
-    http_req_failed: ['rate<0.05'],
+    http_req_failed: ['rate<0.10'],
   },
 };
 

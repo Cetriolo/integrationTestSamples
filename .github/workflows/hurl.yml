@@ -12,6 +12,11 @@ jobs:
     name: Hurl Declarative API Tests
     runs-on: ubuntu-latest
 
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+
     services:
       api:
         image: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
@@ -45,11 +50,12 @@ jobs:
 
       - name: Run Hurl tests
         run: |
+          mkdir -p reports/hurl
           hurl --test \
             --variable base_url=http://localhost:8080 \
             --report-html reports/hurl \
             --report-junit reports/hurl/junit.xml \
-            --json reports/hurl/results.json \
+            --report-json reports/hurl/results.json \
             --color \
             tests/hurl/*.hurl
 
@@ -58,18 +64,18 @@ jobs:
         run: |
           echo "### 🔥 Hurl Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ -f reports/hurl/results.json ]; then
             cat reports/hurl/results.json | jq -r '
               def format_duration: . / 1000000 | tostring + "ms";
-          
+
               "**Total Tests:** \(.results | length)",
               "**Passed:** ✅ \(.results | map(select(.success == true)) | length)",
               "**Failed:** ❌ \(.results | map(select(.success == false)) | length)",
               "**Duration:** \(.duration | format_duration)",
               "",
               "#### Failed Tests",
-              (.results | map(select(.success == false)) | 
+              (.results | map(select(.success == false)) |
                 if length > 0 then
                   map("- ❌ \(.filename)") | join("\n")
                 else
@@ -99,37 +105,37 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             if (!fs.existsSync('reports/hurl/results.json')) {
               console.log('No results file found');
               return;
             }
-            
+
             const results = JSON.parse(fs.readFileSync('reports/hurl/results.json', 'utf8'));
-            
+
             const passed = results.results.filter(r => r.success).length;
             const failed = results.results.filter(r => !r.success).length;
             const total = results.results.length;
-            
+
             let failureDetails = '';
             if (failed > 0) {
-              failureDetails = '\n\n#### Failed Tests:\n' + 
+              failureDetails = '\n\n#### Failed Tests:\n' +
                 results.results
                   .filter(r => !r.success)
                   .map(r => `- ❌ ${r.filename}`)
                   .join('\n');
             }
-            
+
             const summary = `
             ### 🔥 Hurl Test Results
-            
+
             - **Total:** ${total}
             - **Passed:** ✅ ${passed}
             - **Failed:** ❌ ${failed}
             - **Success Rate:** ${((passed/total)*100).toFixed(1)}%
             ${failureDetails}
             `;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

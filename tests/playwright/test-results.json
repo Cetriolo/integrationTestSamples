@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/home/cetri/projects/integrationTestSamples/tests/playwright/playwright.config.js",
-    "rootDir": "/home/cetri/projects/integrationTestSamples/tests/playwright/tests",
+    "configFile": "/home/cetri/projects/integrationtestsamples/tests/playwright/playwright.config.js",
+    "rootDir": "/home/cetri/projects/integrationtestsamples/tests/playwright/tests",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -39,7 +39,7 @@
     "quiet": false,
     "projects": [
       {
-        "outputDir": "/home/cetri/projects/integrationTestSamples/tests/playwright/test-results",
+        "outputDir": "/home/cetri/projects/integrationtestsamples/tests/playwright/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -47,7 +47,7 @@
         },
         "id": "api-tests",
         "name": "api-tests",
-        "testDir": "/home/cetri/projects/integrationTestSamples/tests/playwright/tests",
+        "testDir": "/home/cetri/projects/integrationtestsamples/tests/playwright/tests",
         "testIgnore": [],
         "testMatch": [
           "**/*.spec.js"

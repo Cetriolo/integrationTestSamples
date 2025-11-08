@@ -1,4 +1,4 @@
-module github.com/cetriolo/integrationTestSamples
+module github.com/cetriolo/integrationtestsamples
 
 go 1.25.1
 

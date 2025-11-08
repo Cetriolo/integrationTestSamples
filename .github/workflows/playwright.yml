@@ -15,7 +15,7 @@ jobs:
 
     services:
       api:
-        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+        image: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
         ports:
           - 8080:8080
         options: >-

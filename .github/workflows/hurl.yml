@@ -55,9 +55,9 @@ jobs:
             --variable base_url=http://localhost:8080 \
             --report-html reports/hurl \
             --report-junit reports/hurl/junit.xml \
-            --report-json reports/hurl/results.json \
+            --json \
             --color \
-            tests/hurl/*.hurl
+            tests/hurl/*.hurl > reports/hurl/results.json
 
       - name: Generate test summary
         if: always()

@@ -237,12 +237,12 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: tests/api.spec.js
+        working-directory: tests/playwright
         run: npm ci
 
       - name: Install Playwright
-        working-directory: tests/api.spec.js
-        run: npx api.spec.js install --with-deps chromium
+        working-directory: tests/playwright
+        run: npx playwright install --with-deps chromium
 
       - name: Wait for API
         run: |
@@ -254,17 +254,17 @@ jobs:
           done
 
       - name: Run Playwright tests
-        working-directory: tests/api.spec.js
+        working-directory: tests/playwright
         env:
           API_URL: http://localhost:8080
-        run: npx api.spec.js test
+        run: npx playwright test
 
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api.spec.js-results
-          path: tests/api.spec.js/api.spec.js-report/
+          name: playwright-results
+          path: tests/playwright/playwright-report/
 
   # Performance tests with load-test.js (only on main branch)
   k6-tests:
